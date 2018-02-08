@@ -104,7 +104,7 @@ class Bar {
 	}
 
 	addError(sd){
-		const sdLen =  sd*this.h
+		const sdLen =  sd*this.h*1.96
 		const errorX = this.x+this.w/2
 		const y1 = this.h - (this.y + sdLen)
 		const y2 = this.h - (this.y - sdLen)
