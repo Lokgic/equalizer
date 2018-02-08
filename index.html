@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<meta charset="utf=8">
+<style>
+ 
+</style>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<svg width="600" height="500"></svg>
+<button class="plus">+</button>
+<button class="minus">-</button>
+<span>Delay:  </span> <span class="speendDisplay"></span>
+
+<form>
+	<label>Mean A</label>
+  <select id="meanA">
+    <option selected="selected" value="0.2">0.2</option>
+    <option value="0.3">0.3</option>
+    <option value="0.4">0.4</option>
+    <option value="0.5">0.5</option>
+    <option value="0.6">0.6</option>
+    <option value="0.7">0.7</option>
+    <option value="0.8">0.8</option>
+  </select>
+  <label>SD A</label>
+  <select id="sdA">
+    <option selected="selected" value="0.025">0.025</option>
+    <option value="0.05">0.05</option>
+    <option  value="0.1">0.1</option>
+  </select>
+  <label>Mean B</label>
+  <select id="meanB">
+    <option value="0.2">0.2</option>
+    <option selected="selected" value="0.3">0.3</option>
+    <option value="0.4">0.4</option>
+    <option value="0.5">0.5</option>
+    <option value="0.6">0.6</option>
+    <option value="0.7">0.7</option>
+    <option value="0.8">0.8</option>
+  </select>
+  <label>SD B</label>
+  <select id="sdB">
+    <option  value="0.025">0.025</option>
+    <option value="0.05">0.05</option>
+    <option selected="selected" value="0.1">0.1</option>
+  </select>
+</form>
+
+
+<script>
+const svg = d3.select('svg');
+ 
+let rec = {
+	'aGreaterThanB': 0,
+	'bGreaterThana':0,
+	'aEqualsB':0
+}
+
+class Bar {
+	constructor(h,w,color,x,y,label){
+		this.h = h;
+		this.w = w;
+		this.x = x;
+		this.y = y
+		this.bottom = svg.append('rect')
+			   .attr('width',w)
+			   .attr('height',y)
+			   .attr('fill', color)
+			   .attr('x',x)
+			   .attr('y', h-y);
+
+		this.top = svg.append('rect')
+		   .attr('width', w)
+		   .attr('height',h - y)
+		   .attr('fill', "grey")
+		   .attr('x', x)
+		   .attr('y', 0);
+		svg.append('text')
+			.attr('x',x-5)
+			.attr('y',h+20)
+			.attr('text-anchor','start')
+			.attr('font-size',12)
+			.text(label)
+
+	}
+	update(y,t=500,sd=null){
+		this.y = y
+		const h = this.h
+			this.bottom
+					.transition()
+					.duration(t)
+					.attr('height',y)
+					.attr('y', h-y);
+
+				this.top
+					.transition()
+					.duration(t)
+					.attr('height', h-y);
+		if (this.error !== undefined && sd!==null){
+			this.error.remove()
+			this.addError(sd)
+		}
+	}
+
+	addError(sd){
+		const sdLen =  sd*this.h
+		const errorX = this.x+this.w/2
+		const y1 = this.h - (this.y + sdLen)
+		const y2 = this.h - (this.y - sdLen)
+		const hBarLen = 5
+		this.error = svg.append('g')
+						.attr('class','error')
+		this.error.append('line')
+					.attr('x1',errorX)
+					.attr('x2',errorX)
+					.attr('y2',y2)
+					.attr('y1',y1)
+					.attr('stroke','black')
+					.attr('stroke-width',2)
+		
+		this.error.append('line')
+					.attr('x1',errorX - hBarLen)
+					.attr('x2',errorX + hBarLen)
+					.attr('y2',y2)
+					.attr('y1',y2)
+					.attr('stroke','black')
+					.attr('stroke-width',2)
+		this.error.append('line')
+					.attr('x1',errorX - hBarLen)
+					.attr('x2',errorX + hBarLen)
+					.attr('y2',y1)
+					.attr('y1',y1)
+					.attr('stroke','black')
+					.attr('stroke-width',2)
+
+	}
+}
+
+
+
+
+ 
+d3.csv('https://gist.githubusercontent.com/Lokgic/f64fb8b639bdf670c9bc8d9c124601ff/raw/326b71516848edb99a6a37838d2b4258b1631486/chains.csv',
+		data=>{
+			const cols = data["columns"]
+			const getCol = ({m,sd})=>{
+			let m2,sd2
+			switch(parseFloat(sd)){
+				case 0.025:
+					sd2 = 1
+					break;
+				case 0.05:
+					sd2 = 2;
+					break;
+				case 0.1:
+					sd2 = 3;
+					break;
+				default:
+					sd2 = 1;
+
+				}
+			switch(parseFloat(m)){
+				case 0.2:
+					m2 = 0
+					break;
+				case 0.3:
+					m2 = 1;
+					break;
+				case 0.4:
+					m2 = 2;
+					break;
+				case 0.5:
+					m2 = 3;
+					break;
+				case 0.6:
+					m2 = 4;
+					break;
+				case 0.7:
+					m2 = 5;
+					break;
+				case 0.8:
+					m2 = 6;
+					break;
+				default:
+					m2 = 2;
+
+				}
+				const colName = cols[m2*3+sd2]
+				console.log(colName)
+				const out = data.map(d=>parseFloat(d[colName]));
+				return out
+			}
+			let dist = {
+				meanA:d3.select('#meanA').property('value'),
+				meanB:d3.select('#meanB').property('value'),
+				sdA:d3.select('#sdA').property('value'),
+				sdB:d3.select('#sdB').property('value')
+			}
+			
+			let samplesA = getCol({m:dist.meanA,sd:dist.sdA});
+			let samplesB = getCol({m:dist.meanB,sd:dist.sdB});
+			console.log(samplesA)
+			console.log(samplesB)
+			const width = 40,
+					height = 400;
+			const marginLeft = 50;
+			let y1 = samplesA[0]*height;
+			let y2 = samplesB[0]*height;
+			const color = "#006495"
+
+			let A = new Bar(height, width, "#F2635F", marginLeft,y1,"A-Dynamic");
+			let B = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft),y2,"B-Dynamic");
+
+			let staticA = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft)*2,height*dist.meanA,"A-Static");
+			let staticB = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft)*3,height*dist.meanB,"B-Static");
+			staticA.addError(dist.sdA)
+			staticB.addError(dist.sdB)
+			
+
+			let timeInterval = 150
+
+			let loc = 1;
+	
+			const yScale = d3.scaleLinear()
+							.domain([0,1])
+							.range([height,0])
+			
+			const yAxis = d3.axisRight(yScale)
+							.tickSize(600)
+							.tickFormat(d=>d)
+			const styledYAxis = (g)=>{
+				g.call(yAxis)
+				g.select(".domain").remove();
+				g.selectAll(".tick:not(:first-of-type) line").attr("stroke", "#777").attr("stroke-dasharray", "2,2");
+				g.selectAll(".tick text").attr("x", 4).attr("dy", -4);
+			}
+
+			svg.append('g')
+			.call(styledYAxis)
+			display = d3.select('.speendDisplay')
+				.text(timeInterval)
+
+			const update = ()=>{
+				y1 = samplesA[loc]*height;
+				A.update(y1,timeInterval)
+				y2 = samplesB[loc]*height;
+				B.update(y2,timeInterval)
+				return loc<samplesA.length? loc + 1 : 0;
+			}
+
+			t=d3.interval(()=>{
+				loc = update();
+			},timeInterval)
+
+			d3.selectAll('select')
+				.on('change', function(){
+					const name = d3.select(this).attr('id');
+					const val = d3.select(this).property('value');
+					dist[name] = val;
+					samplesA = getCol({m:dist.meanA,sd:dist.sdA});
+					samplesB = getCol({m:dist.meanB,sd:dist.sdB});
+					staticA.update(height*dist.meanA,150,dist.sdA)
+					staticB.update(height*dist.meanB,150,dist.sdB)
+
+
+					loc = 1;
+				})
+
+			d3.select('.minus')
+				.on('click',()=>{
+					t.stop();
+					timeInterval = timeInterval >= 30? timeInterval - 20:10
+					display.text(timeInterval)
+					t=d3.interval(()=>{
+						loc = update();
+					},timeInterval)
+					
+				})
+			d3.select('.plus')
+				.on('click',()=>{
+					t.stop();
+					timeInterval = timeInterval + 20
+					display.text(timeInterval)
+					t=d3.interval(()=>{
+						loc = update();
+					},timeInterval)
+					
+				})
+		}
+	)
+
+
+</script>

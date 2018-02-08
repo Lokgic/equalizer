@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<meta charset="utf=8">
+<style>
+ 
+</style>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<svg width="600" height="500"></svg>
+<button class="plus">+</button>
+<button class="minus">-</button>
+<span>Delay:  </span> <span class="speendDisplay"></span>
+<script>
+const svg = d3.select('svg');
+ 
+let rec = {
+	'aGreaterThanB': 0,
+	'bGreaterThana':0,
+	'aEqualsB':0
+}
+
+class Bar {
+	constructor(h,w,color,x,y){
+		this.h = h;
+		this.w = w;
+		this.bottom = svg.append('rect')
+			   .attr('width',w)
+			   .attr('height',y)
+			   .attr('fill', color)
+			   .attr('x',x)
+			   .attr('y', h-y);
+
+		this.top = svg.append('rect')
+		   .attr('width', w)
+		   .attr('height',h - y)
+		   .attr('fill', "grey")
+		   .attr('x', x)
+		   .attr('y', 0);
+
+	}
+	update(y,t){
+		const h = this.h
+			this.bottom
+					.transition()
+					.duration(t)
+					.attr('height',y)
+					.attr('y', h-y);
+
+				this.top
+					.transition()
+					.duration(t)
+					.attr('height', h-y);
+	}
+}
+ 
+d3.csv('https://gist.githubusercontent.com/Lokgic/f64fb8b639bdf670c9bc8d9c124601ff/raw/87299f00df9f08b5948548cf156ae2b90551cc91/seq.csv',
+		data=>{
+			const samplesA = data.map(d=>parseFloat(d[Object.keys(d)[0]]));
+			const samplesB = data.map(d=>parseFloat(d[Object.keys(d)[1]]));
+			const width = 40,
+					height = 400;
+			const marginLeft = 250;
+			let y1 = samplesA[0]*height;
+			let y2 = samplesB[0]*height;
+			const color = "#006495"
+
+			A = new Bar(height, width, "#006495", marginLeft,y1);
+			B = new Bar(height, width, "#F2635F", marginLeft*1.5,y2);
+	
+			let timeInterval = 150
+
+			let loc = 1;
+	
+
+
+			display = d3.select('.speendDisplay')
+				.text(timeInterval)
+
+			const update = ()=>{
+				y1 = samplesA[loc]*height;
+				A.update(y1,timeInterval)
+				y2 = samplesB[loc]*height;
+				B.update(y2,timeInterval)
+				return loc<samplesA.length? loc + 1 : 0;
+			}
+
+			t=d3.interval(()=>{
+				loc = update();
+			},timeInterval)
+
+			d3.select('.minus')
+				.on('click',()=>{
+					t.stop();
+					timeInterval = timeInterval >= 30? timeInterval - 20:10
+					display.text(timeInterval)
+					t=d3.interval(()=>{
+						loc = update();
+					},timeInterval)
+					
+				})
+			d3.select('.plus')
+				.on('click',()=>{
+					t.stop();
+					timeInterval = timeInterval + 20
+					display.text(timeInterval)
+					t=d3.interval(()=>{
+						loc = update();
+					},timeInterval)
+					
+				})
+		}
+	)
+
+
+</script>
