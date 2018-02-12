@@ -7,10 +7,10 @@
  
 </style>
 <script src="https://d3js.org/d3.v4.min.js"></script>
-<svg width="600" height="500"></svg>
+<svg width="800" height="500"></svg>
 <button class="plus">+</button>
 <button class="minus">-</button>
-<span>Delay:  </span> <span class="speendDisplay"></span>
+<span>Speed:  </span> <span class="speendDisplay"></span>
 
 <form>
 	<label>Mean A</label>
@@ -45,24 +45,25 @@
     <option value="0.05">0.05</option>
     <option selected="selected" value="0.1">0.1</option>
   </select>
+
 </form>
 
-
+<button id = "toggle-static">
+	Toggle Static
+</button>
+<button id="toggle-dynamic">Toggle Dynamic</button>
 <script>
 const svg = d3.select('svg');
  
-let rec = {
-	'aGreaterThanB': 0,
-	'bGreaterThana':0,
-	'aEqualsB':0
-}
+
 
 class Bar {
 	constructor(h,w,color,x,y,label){
 		this.h = h;
 		this.w = w;
 		this.x = x;
-		this.y = y
+		this.y = y;
+		this.visible = 1
 		this.bottom = svg.append('rect')
 			   .attr('width',w)
 			   .attr('height',y)
@@ -76,12 +77,23 @@ class Bar {
 		   .attr('fill', "grey")
 		   .attr('x', x)
 		   .attr('y', 0);
-		svg.append('text')
+		this.text = svg.append('text')
 			.attr('x',x-5)
 			.attr('y',h+20)
 			.attr('text-anchor','start')
 			.attr('font-size',12)
 			.text(label)
+
+	}
+	toggleVisibility(){
+		const opacity = (this.visible)? 0 : 1;
+		this.visible = 1 - this.visible;
+		this.top.attr('opacity',opacity);
+		this.bottom.attr('opacity',opacity);
+		this.text.attr('opacity',opacity);
+		if (this.error !== undefined){
+			this.error.attr('opacity',opacity);
+		}
 
 	}
 	update(y,t=500,sd=null){
@@ -100,6 +112,7 @@ class Bar {
 		if (this.error !== undefined && sd!==null){
 			this.error.remove()
 			this.addError(sd)
+			
 		}
 	}
 
@@ -133,6 +146,9 @@ class Bar {
 					.attr('y1',y1)
 					.attr('stroke','black')
 					.attr('stroke-width',2)
+		if (this.visible === 0){
+				this.error.attr('opacity',0);
+			}
 
 	}
 }
@@ -187,7 +203,6 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 
 				}
 				const colName = cols[m2*3+sd2]
-				console.log(colName)
 				const out = data.map(d=>parseFloat(d[colName]));
 				return out
 			}
@@ -200,24 +215,26 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 			
 			let samplesA = getCol({m:dist.meanA,sd:dist.sdA});
 			let samplesB = getCol({m:dist.meanB,sd:dist.sdB});
-			console.log(samplesA)
-			console.log(samplesB)
+			
+			const speedNormalizer = 1010
+
 			const width = 40,
 					height = 400;
 			const marginLeft = 50;
 			let y1 = samplesA[0]*height;
 			let y2 = samplesB[0]*height;
 			const color = "#006495"
+			let dynamicXCol = 500
 
-			let A = new Bar(height, width, "#F2635F", marginLeft,y1,"A-Dynamic");
-			let B = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft),y2,"B-Dynamic");
+			let A = new Bar(height, width, "#F2635F", dynamicXCol+marginLeft,y1,"A-Dynamic");
+			let B = new Bar(height, width, "#F2635F", dynamicXCol+marginLeft+(width+marginLeft),y2,"B-Dynamic");
 
-			let staticA = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft)*2,height*dist.meanA,"A-Static");
-			let staticB = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft)*3,height*dist.meanB,"B-Static");
+			let staticA = new Bar(height, width, "#F2635F", marginLeft,height*dist.meanA,"A-Static");
+			let staticB = new Bar(height, width, "#F2635F", marginLeft+(width+marginLeft),height*dist.meanB,"B-Static");
 			staticA.addError(dist.sdA)
 			staticB.addError(dist.sdB)
 			
-
+			
 			let timeInterval = 150
 
 			let loc = 1;
@@ -227,8 +244,10 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 							.range([height,0])
 			
 			const yAxis = d3.axisRight(yScale)
-							.tickSize(600)
+							.tickSize(250)
 							.tickFormat(d=>d)
+
+
 			const styledYAxis = (g)=>{
 				g.call(yAxis)
 				g.select(".domain").remove();
@@ -236,10 +255,20 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 				g.selectAll(".tick text").attr("x", 4).attr("dy", -4);
 			}
 
-			svg.append('g')
+			const ticks1= svg.append('g')
+			.attr('opacity',1)
 			.call(styledYAxis)
+			
+			
+			const ticks2= svg.append('g')
+			.attr('transform',`translate(${dynamicXCol},0)`)
+			.attr('opacity',1)
+			.call(styledYAxis)
+			
+
+
 			display = d3.select('.speendDisplay')
-				.text(timeInterval)
+				.text(speedNormalizer-timeInterval)
 
 			const update = ()=>{
 				y1 = samplesA[loc]*height;
@@ -267,25 +296,42 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 					loc = 1;
 				})
 
-			d3.select('.minus')
+			d3.select('.plus')
 				.on('click',()=>{
 					t.stop();
 					timeInterval = timeInterval >= 30? timeInterval - 20:10
-					display.text(timeInterval)
+					display.text(speedNormalizer-timeInterval)
 					t=d3.interval(()=>{
 						loc = update();
 					},timeInterval)
 					
 				})
-			d3.select('.plus')
+			d3.select('.minus')
 				.on('click',()=>{
 					t.stop();
 					timeInterval = timeInterval + 20
-					display.text(timeInterval)
+					display.text(speedNormalizer-timeInterval)
 					t=d3.interval(()=>{
 						loc = update();
 					},timeInterval)
 					
+				})
+			
+			d3.select('#toggle-static')
+				.on('click',()=>{
+					staticA.toggleVisibility()
+					staticB.toggleVisibility()
+					const currentOp = ticks1.attr('opacity')
+
+					ticks1.attr('opacity',1-currentOp)
+				})
+			d3.select('#toggle-dynamic')
+				.on('click',()=>{
+					A.toggleVisibility();
+					B.toggleVisibility();
+					const currentOp = ticks2.attr('opacity')
+
+					ticks2.attr('opacity',1-currentOp)
 				})
 		}
 	)
