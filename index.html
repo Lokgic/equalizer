@@ -4,54 +4,71 @@
 
 
 <style>
- 
+ #inner {
+	 margin:auto;
+ }
+ #outer{
+	 display: flex;
+	 width:100vw;
+	 height:100vh;
+ }
+ #setup{
+	 width:800px;
+ }
 </style>
 <script src="https://d3js.org/d3.v4.min.js"></script>
-<svg width="800" height="500"></svg>
-<button class="plus">+</button>
-<button class="minus">-</button>
-<span>Speed:  </span> <span class="speendDisplay"></span>
+<div id="outer">
+	<div id="inner">
+		<p id="setup">
+			You are given a choice between two games. Winning either game will yield the same prize. Your chance of winning is represented in the bar plots below. However, these estimates are not totally precise, and their precisions are indicated by the error bar(left) or motion(right). If you want to win, which game would you choose?
+		</p>
+		<svg width="800" height="500"></svg>
+		<button class="minus">-</button>
+		<button class="plus">+</button>
+		<span>Speed:  </span> <span class="speendDisplay"></span>
 
-<form>
-	<label>Mean A</label>
-  <select id="meanA">
-    <option selected="selected" value="0.2">0.2</option>
-    <option value="0.3">0.3</option>
-    <option value="0.4">0.4</option>
-    <option value="0.5">0.5</option>
-    <option value="0.6">0.6</option>
-    <option value="0.7">0.7</option>
-    <option value="0.8">0.8</option>
-  </select>
-  <label>SD A</label>
-  <select id="sdA">
-    <option selected="selected" value="0.025">0.025</option>
-    <option value="0.05">0.05</option>
-    <option  value="0.1">0.1</option>
-  </select>
-  <label>Mean B</label>
-  <select id="meanB">
-    <option value="0.2">0.2</option>
-    <option selected="selected" value="0.3">0.3</option>
-    <option value="0.4">0.4</option>
-    <option value="0.5">0.5</option>
-    <option value="0.6">0.6</option>
-    <option value="0.7">0.7</option>
-    <option value="0.8">0.8</option>
-  </select>
-  <label>SD B</label>
-  <select id="sdB">
-    <option  value="0.025">0.025</option>
-    <option value="0.05">0.05</option>
-    <option selected="selected" value="0.1">0.1</option>
-  </select>
+		<form>
+			<label>Mean A</label>
+		<select id="meanA">
+			<option selected="selected" value="0.2">0.2</option>
+			<option value="0.3">0.3</option>
+			<option value="0.4">0.4</option>
+			<option value="0.5">0.5</option>
+			<option value="0.6">0.6</option>
+			<option value="0.7">0.7</option>
+			<option value="0.8">0.8</option>
+		</select>
+		<label>SD A</label>
+		<select id="sdA">
+			<option selected="selected" value="0.025">0.025</option>
+			<option value="0.05">0.05</option>
+			<option  value="0.1">0.1</option>
+		</select>
+		<label>Mean B</label>
+		<select id="meanB">
+			<option value="0.2">0.2</option>
+			<option selected="selected" value="0.3">0.3</option>
+			<option value="0.4">0.4</option>
+			<option value="0.5">0.5</option>
+			<option value="0.6">0.6</option>
+			<option value="0.7">0.7</option>
+			<option value="0.8">0.8</option>
+		</select>
+		<label>SD B</label>
+		<select id="sdB">
+			<option  value="0.025">0.025</option>
+			<option value="0.05">0.05</option>
+			<option selected="selected" value="0.1">0.1</option>
+		</select>
 
-</form>
+		</form>
 
-<button id = "toggle-static">
-	Toggle Static
-</button>
-<button id="toggle-dynamic">Toggle Dynamic</button>
+		<button id = "toggle-static">
+			Toggle Static
+		</button>
+		<button id="toggle-dynamic">Toggle Dynamic</button>
+	</div>
+</div>
 <script>
 const svg = d3.select('svg');
  
@@ -235,17 +252,23 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 			staticB.addError(dist.sdB)
 			
 			
-			let timeInterval = 150
-
+			let timeInterval = 80
+			const maxSpeed = 20
+			const minSpeed = 400
+			const speedScale = d3.scaleLinear()
+							.domain([minSpeed,maxSpeed])
+							.rangeRound([0,100])
+							.clamp(true);
 			let loc = 1;
 	
 			const yScale = d3.scaleLinear()
 							.domain([0,1])
-							.range([height,0])
+							.range([height,0]);
 			
 			const yAxis = d3.axisRight(yScale)
 							.tickSize(250)
-							.tickFormat(d=>d)
+							.tickFormat(d=>d);
+			
 
 
 			const styledYAxis = (g)=>{
@@ -268,7 +291,7 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 
 
 			display = d3.select('.speendDisplay')
-				.text(speedNormalizer-timeInterval)
+				.text(speedScale(timeInterval))
 
 			const update = ()=>{
 				y1 = samplesA[loc]*height;
@@ -299,8 +322,8 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 			d3.select('.plus')
 				.on('click',()=>{
 					t.stop();
-					timeInterval = timeInterval >= 30? timeInterval - 20:10
-					display.text(speedNormalizer-timeInterval)
+					timeInterval = Math.max(maxSpeed,timeInterval-20)
+					display.text(speedScale(timeInterval))
 					t=d3.interval(()=>{
 						loc = update();
 					},timeInterval)
@@ -309,8 +332,8 @@ d3.csv('https://raw.githubusercontent.com/Lokgic/equalizer/master/chains.csv',
 			d3.select('.minus')
 				.on('click',()=>{
 					t.stop();
-					timeInterval = timeInterval + 20
-					display.text(speedNormalizer-timeInterval)
+					timeInterval = Math.min(minSpeed,timeInterval+20)
+					display.text(speedScale(timeInterval))
 					t=d3.interval(()=>{
 						loc = update();
 					},timeInterval)
